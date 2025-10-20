@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HC Stock Exchange</title>
+<style>
+/* --- BASE THEME --- */
+* { box-sizing: border-box; }
+body {
+margin: 0;
+font-family: 'Poppins', sans-serif;
+background: radial-gradient(circle at center, #0a0a0a, #000);
+color: #eee;
+overflow-x: hidden;
+}
+h1,h2,h3,h4 { margin: 0; color: #fff; text-shadow: 0 0 10px #0ff; }
+
+/* --- NAVBAR --- */
+header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 10px 30px;
+background: linear-gradient(90deg, #111, #222);
+box-shadow: 0 0 20px #0ff3;
+position: sticky;
+top: 0;
+z-index: 100;
+}
+header h1 { font-size: 1.5rem; color: #0ff; letter-spacing: 2px; }
+nav button {
+background: none;
+border: none;
+color: #ccc;
+font-size: 1rem;
+margin-left: 15px;
+cursor: pointer;
+transition: 0.3s;
+}
+nav button.active, nav button:hover { color: #0ff; text-shadow: 0 0 8px #0ff; }
+
+/* --- TABS --- */
+section { display: none; padding: 20px; animation: fadeIn 0.6s ease; }
+section.active { display: block; }
+@keyframes fadeIn {
+from { opacity: 0; transform: translateY(10px); }
+to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- PLAYER GRID --- */
+.player-grid {
+display: grid;
+grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+gap: 20px;
+}
+.player-card {
+background: linear-gradient(180deg, #111, #1a1a1a);
+border: 1px solid #0ff3;
+border-radius: 10px;
+padding: 15px;
+box-shadow: 0 0 15px #0ff1;
+transition: transform 0.2s, box-shadow 0.3s;
+}
+.player-card:hover {
+transform: translateY(-5px);
+box-shadow: 0 0 25px #0ff5;
+}
+.player-card h3 { font-size: 1.1rem; margin-bottom: 8px; }
+.player-card p { margin: 4px 0; color: #aaa; font-size: 0.9rem; }
+.player-card button {
+background: linear-gradient(90deg, #0ff, #09f);
+border: none;
+padding: 6px 10px;
+border-radius: 6px;
+cursor: pointer;
+color: #000;
+font-weight: bold;
+width: 48%;
+transition: 0.3s;
+}
+.player-card button:hover { opacity: 0.85; }
+
+/* --- TABLE --- */
+table {
+width: 100%;
+border-collapse: collapse;
+margin-top: 20px;
+color: #ddd;
+box-shadow: 0 0 20px #0ff2;
+background: #111a;
+border-radius: 10px;
+overflow: hidden;
+}
+th, td {
+padding: 10px;
+text-align: left;
+border-bottom: 1px solid #0ff2;
+}
+th {
+background: #0ff2;
+color: #000;
+text-transform: uppercase;
+}
+
+/* --- BUTTONS --- */
+.btn-glow {
+background: linear-gradient(90deg, #0ff, #09f);
+border: none;
+border-radius: 6px;
+color: #000;
+font-weight: bold;
+padding: 8px 16px;
+cursor: pointer;
+transition: 0.3s;
+margin-top: 10px;
+}
+.btn-glow:hover { box-shadow: 0 0 20px #0ff; }
+
+/* --- MODALS --- */
+.modal-bg {
+display: none;
+position: fixed;
+top: 0; left: 0;
+width: 100%; height: 100%;
+background: rgba(0,0,0,0.8);
+backdrop-filter: blur(8px);
+align-items: center;
+justify-content: center;
+z-index: 200;
+}
+.modal {
+background: #111;
+border: 1px solid #0ff3;
+border-radius: 10px;
+padding: 20px;
+min-width: 300px;
+box-shadow: 0 0 25px #0ff4;
+animation: zoomIn 0.4s ease;
+}
+@keyframes zoomIn {
+from { transform: scale(0.9); opacity: 0; }
+to { transform: scale(1); opacity: 1; }
+}
+
+/* --- ADMIN --- */
+.admin-tools {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 20px;
+}
+textarea {
+width: 100%;
+height: 150px;
+background: #000;
+color: #0ff;
+border: 1px solid #0ff4;
+border-radius: 8px;
+padding: 10px;
+resize: none;
+}
+
+/* --- FOOTER --- */
+footer {
+text-align: center;
+padding: 20px;
+color: #666;
+font-size: 0.85rem;
+}
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+<h1>HC STOCK EXCHANGE</h1>
+<nav>
+<button class="tab-btn active" data-tab="market">Market</button>
+<button class="tab-btn" data-tab="portfolio">Portfolio</button>
+<button class="tab-btn" data-tab="leaderboard">Leaderboard</button>
+<button class="tab-btn" data-tab="admin">Admin</button>
+<button id="logoutBtn" class="hidden">Logout</button>
+</nav>
+</header>
+
+<section id="market" class="active">
+<h2>Player Market</h2>
+<input type="text" id="search" placeholder="Search players..." style="width:100%;padding:10px;margin:10px 0;border-radius:8px;background:#111;color:#0ff;border:1px solid #0ff;">
+<div class="player-grid" id="playerGrid"></div>
+</section>
+
+<section id="portfolio">
+<h2>Your Portfolio</h2>
+<div id="walletInfo"></div>
+<table id="portfolioTable">
+<thead><tr><th>Player</th><th>Qty</th><th>Avg Buy</th><th>Price</th><th>Actions</th></tr></thead>
+<tbody></tbody>
+</table>
+</section>
+
+<section id="leaderboard">
+<h2>Leaderboard</h2>
+<table id="leaderboardTable">
+<thead><tr><th>User</th><th>Wallet</th><th>Total Value</th></tr></thead>
+<tbody></tbody>
+</table>
+</section>
+
+<section id="admin">
+<h2>Admin Control</h2>
+<div id="adminLogin">
+<input type="password" id="adminPass" placeholder="Enter Admin Code (0202)">
+<button class="btn-glow" id="adminLoginBtn">Enter</button>
+</div>
+<div id="adminPanel" class="hidden">
+<div class="admin-tools">
+<div>
+<h3>Update Player</h3>
+<input id="adminPlayerId" placeholder="Player ID (player1)">
+<input id="adminPlayerPrice" placeholder="New Price">
+<button class="btn-glow" id="updatePlayerBtn">Update</button>
+</div>
+<div>
+<h3>Bulk Price Adjust</h3>
+<textarea id="bulkInput" placeholder="player1, +1000"></textarea>
+<button class="btn-glow" id="bulkApply">Apply Bulk</button>
+</div>
+</div>
+<h3>Registered Users</h3>
+<table id="adminUsers"><thead><tr><th>User</th><th>Wallet</th></tr></thead><tbody></tbody></table>
+</div>
+</section>
+
+<footer>© 2025 HC Stock Exchange. Built for fun, not finance.</footer>
+
+<div class="modal-bg" id="loginModal">
+<div class="modal">
+<h3>Login / Register</h3>
+<input id="username" placeholder="Username" style="width:100%;margin-bottom:10px;padding:8px;">
+<button class="btn-glow" id="loginBtn">Continue</button>
+</div>
+</div>
+
+<div class="modal-bg" id="tradeModal">
+<div class="modal">
+<h3 id="tradePlayerName"></h3>
+<p id="tradePrice"></p>
+<input id="tradeQty" type="number" min="1" value="1" style="width:100%;margin:8px 0;">
+<button class="btn-glow" id="buyBtn">Buy</button>
+<button class="btn-glow" id="sellBtn">Sell</button>
+<button class="btn-glow" id="closeTrade">Close</button>
+</div>
+</div>
+<script>
+/* -----------------------------------------------
+🧠 APP LOGIC — HC STOCK EXCHANGE (Part 2)
+--------------------------------------------------*/
+
+// ---------- DATA INITIALIZATION ----------
+let users = JSON.parse(localStorage.getItem("hc_users")) || {};
+let players = JSON.parse(localStorage.getItem("hc_players")) || {};
+let currentUser = null;
+
+// Create 600 demo players if not yet generated
+if (Object.keys(players).length === 0) {
+for (let i = 1; i <= 600; i++) {
+players[`P${i}`] = {
+id: `P${i}`,
+name: `Player ${i}`,
+price: 50000 + Math.floor(Math.random() * 5000),
+change: 0,
+history: []
+};
+}
+localStorage.setItem("hc_players", JSON.stringify(players));
+}
+
+// ---------- HELPER FUNCTIONS ----------
+function saveData() {
+localStorage.setItem("hc_users", JSON.stringify(users));
+localStorage.setItem("hc_players", JSON.stringify(players));
+}
+
+function formatCurrency(num) {
+return "₹" + num.toLocaleString("en-IN");
+}
+
+function totalPortfolioValue(user) {
+let total = 0;
+for (const [pid, qty] of Object.entries(user.portfolio)) {
+const player = players[pid];
+if (player) total += player.price * qty;
+}
+return total;
+}
+
+// ---------- LOGIN / REGISTER ----------
+function loginUser() {
+const discordId = document.getElementById("discordId").value.trim();
+const pass = document.getElementById("password").value.trim();
+if (discordId === "admin" && pass === "0202") {
+currentUser = { id: "admin", name: "Admin", admin: true };
+renderAdminPanel();
+document.getElementById("auth").style.display = "none";
+return;
+}
+if (!discordId) return alert("Enter Discord ID!");
+
+if (!users[discordId]) {
+users[discordId] = {
+id: discordId,
+wallet: 0,
+portfolio: {},
+realised: 0,
+unrealised: 0
+};
+}
+currentUser = users[discordId];
+saveData();
+renderDashboard();
+document.getElementById("auth").style.display = "none";
+}
+
+// ---------- DASHBOARD ----------
+function renderDashboard() {
+document.getElementById("main").innerHTML = `
+<div class="tabs">
+<button class="tab active" onclick="showTab('market')">🏦 Market</button>
+<button class="tab" onclick="showTab('portfolio')">💼 Portfolio</button>
+<button class="tab" onclick="showTab('leaderboard')">🏆 Leaderboard</button>
+</div>
+
+<div id="market" class="tab-content"></div>
+<div id="portfolio" class="tab-content" style="display:none;"></div>
+<div id="leaderboard" class="tab-content" style="display:none;"></div>
+`;
+
+renderMarket();
+renderPortfolio();
+renderLeaderboard();
+animateTabs();
+}
+
+// ---------- MARKET TAB ----------
+function renderMarket() {
+const container = document.getElementById("market");
+const sortedPlayers = Object.values(players)
+.sort((a, b) => b.price - a.price)
+.slice(0, 12);
+container.innerHTML = `
+<h2 class="glow">🔥 Top Stocks</h2>
+<div class="player-grid">
+${sortedPlayers
+.map(
+(p) => `
+<div class="player-card metallic">
+<h3>${p.name}</h3>
+<p>Price: ${formatCurrency(p.price)}</p>
+<p class="${p.change >= 0 ? "pos" : "neg"}">
+${p.change >= 0 ? "▲" : "▼"} ${p.change.toFixed(2)}%
+</p>
+<button onclick="buyPlayer('${p.id}')">Buy</button>
+</div>`
+)
+.join("")}
+</div>`;
+}
+
+// ---------- PORTFOLIO TAB ----------
+function renderPortfolio() {
+const container = document.getElementById("portfolio");
+const u = currentUser;
+const entries = Object.entries(u.portfolio);
+const topPlayers = entries
+.map(([pid, qty]) => ({
+pid,
+value: qty * players[pid].price,
+qty
+}))
+.sort((a, b) => b.value - a.value)
+.slice(0, 10);
+
+const totalVal = totalPortfolioValue(u);
+const netWorth = u.wallet + totalVal;
+
+container.innerHTML = `
+<div class="stats">
+<div>Wallet: <span>${formatCurrency(u.wallet)}</span></div>
+<div>Portfolio: <span>${formatCurrency(totalVal)}</span></div>
+<div>Total Value: <span>${formatCurrency(netWorth)}</span></div>
+<div>Realised: <span>${formatCurrency(u.realised)}</span></div>
+<div>Unrealised: <span>${formatCurrency(totalVal - u.realised)}</span></div>
+</div>
+<h2 class="glow">💎 Top 10 Holdings</h2>
+<table class="portfolio-table">
+<tr><th>Player</th><th>Qty</th><th>Price</th><th>Value</th><th></th></tr>
+${topPlayers
+.map(
+(p) => `
+<tr>
+<td>${players[p.pid].name}</td>
+<td>${p.qty}</td>
+<td>${formatCurrency(players[p.pid].price)}</td>
+<td>${formatCurrency(p.value)}</td>
+<td><button onclick="sellPlayer('${p.pid}')">Sell</button></td>
+</tr>`
+)
+.join("")}
+</table>
+<button class="sellAll" onclick="sellAll()">Sell All</button>
+`;
+}
+
+// ---------- LEADERBOARD ----------
+function renderLeaderboard() {
+const container = document.getElementById("leaderboard");
+const list = Object.values(users).map((u) => {
+const portfolio = totalPortfolioValue(u);
+return {
+id: u.id,
+total: u.wallet + portfolio,
+wallet: u.wallet,
+portfolio
+};
+});
+const sorted = list.sort((a, b) => b.total - a.total).slice(0, 10);
+container.innerHTML = `
+<h2 class="glow">🏆 Top 10 Portfolios</h2>
+<table class="leader-table">
+<tr><th>Rank</th><th>User</th><th>Total</th><th>Wallet</th><th>Portfolio</th></tr>
+${sorted
+.map(
+(x, i) => `
+<tr>
+<td>${i + 1}</td>
+<td>${x.id}</td>
+<td>${formatCurrency(x.total)}</td>
+<td>${formatCurrency(x.wallet)}</td>
+<td>${formatCurrency(x.portfolio)}</td>
+</tr>`
+)
+.join("")}
+</table>`;
+}
+
+// ---------- BUY / SELL ----------
+function buyPlayer(pid) {
+const p = players[pid];
+const u = currentUser;
+if (u.wallet < p.price) return alert("Not enough funds!");
+u.wallet -= p.price;
+u.portfolio[pid] = (u.portfolio[pid] || 0) + 1;
+saveData();
+renderPortfolio();
+renderLeaderboard();
+}
+
+function sellPlayer(pid) {
+const u = currentUser;
+if (!u.portfolio[pid]) return alert("You don’t own this player!");
+u.wallet += players[pid].price;
+u.portfolio[pid] -= 1;
+if (u.portfolio[pid] <= 0) delete u.portfolio[pid];
+u.realised += players[pid].price;
+saveData();
+renderPortfolio();
+renderLeaderboard();
+}
+
+function sellAll() {
+const u = currentUser;
+let totalGain = 0;
+for (const [pid, qty] of Object.entries(u.portfolio)) {
+totalGain += players[pid].price * qty;
+}
+u.wallet += totalGain;
+u.realised += totalGain;
+u.portfolio = {};
+saveData();
+renderPortfolio();
+renderLeaderboard();
+}
+
+// ---------- ADMIN PANEL ----------
+function renderAdminPanel() {
+document.getElementById("main").innerHTML = `
+<div class="tabs">
+<button class="tab active" onclick="showTab('adm_players')">⚙️ Manage Players</button>
+<button class="tab" onclick="showTab('adm_users')">👥 Users</button>
+</div>
+<div id="adm_players" class="tab-content"></div>
+<div id="adm_users" class="tab-content" style="display:none;"></div>
+`;
+renderAdminPlayers();
+renderAdminUsers();
+animateTabs();
+}
+
+function renderAdminPlayers() {
+const c = document.getElementById("adm_players");
+const rows = Object.values(players)
+.slice(0, 50)
+.map(
+(p) => `
+<tr>
+<td>${p.id}</td>
+<td>${p.name}</td>
+<td><input value="${p.price}" id="p_${p.id}" class="price-input"></td>
+<td><button onclick="updatePlayerPrice('${p.id}')">Save</button></td>
+</tr>`
+)
+.join("");
+c.innerHTML = `
+<h2 class="glow">Player Price Editor (First 50 only)</h2>
+<table class="admin-table">
+<tr><th>ID</th><th>Name</th><th>Price</th><th></th></tr>${rows}
+</table>`;
+}
+
+function updatePlayerPrice(pid) {
+const val = parseInt(document.getElementById("p_" + pid).value);
+if (isNaN(val) || val <= 0) return alert("Invalid price");
+players[pid].price = val;
+saveData();
+alert("Updated!");
+renderAdminPlayers();
+}
+
+function renderAdminUsers() {
+const c = document.getElementById("adm_users");
+const rows = Object.values(users)
+.map(
+(u) => `
+<tr>
+<td>${u.id}</td>
+<td>${formatCurrency(u.wallet)}</td>
+<td>${Object.keys(u.portfolio).length}</td>
+<td><button onclick="editWallet('${u.id}')">Edit Wallet</button></td>
+</tr>`
+)
+.join("");
+c.innerHTML = `
+<h2 class="glow">Registered Users: ${Object.keys(users).length}</h2>
+<table class="admin-table">
+<tr><th>User</th><th>Wallet</th><th>Holdings</th><th></th></tr>${rows}
+</table>`;
+}
+
+function editWallet(uid) {
+const val = parseInt(prompt("Enter new wallet amount:"));
+if (isNaN(val)) return;
+users[uid].wallet = val;
+saveData();
+renderAdminUsers();
+}
+
+// ---------- UI ANIMATIONS ----------
+function showTab(id) {
+document.querySelectorAll(".tab-content").forEach((el) => (el.style.display = "none"));
+document.querySelectorAll(".tab").forEach((el) => el.classList.remove("active"));
+document.getElementById(id).style.display = "block";
+const idx = ["market", "portfolio", "leaderboard", "adm_players", "adm_users"].indexOf(id);
+if (idx >= 0) document.querySelectorAll(".tab")[idx].classList.add("active");
+}
+
+function animateTabs() {
+document.querySelectorAll(".tab-content").forEach((el) => {
+el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, easing: "ease-in" });
+});
+}
+</script>
+</body>
+</html>
